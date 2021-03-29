@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -16,13 +16,18 @@ library(tidyverse)
 
 # Introduction
 
-One of the most pressing issues of today is manmade climate change. Climate change is spurred by the emission of greenhouse gases into the atmosphere. The energy sector, which burns fossil fuels to help generate power for electricity, heating, industry, and transport, contributes about two thirds of global greenhouse gas emissions, motivating a push to find renewable and sustainable energy sources to replace fossil fuels (Energy). One such source is nuclear energy, which is generated when the nucleus of an atom breaks apart, a process known as fission (Is Nuclear Energy Renewable?). Nuclear energy can also be generated through a fusion reaction, but current fusion technologies are unable to scale up the reactions for commercial use (Provide). Nuclear reactors often use uranium-235 as a fuel source, but there are a few that use plutonium instead (Nuclear explained).
+One of the most pressing issues of today is manmade climate change. Climate change is spurred by the emission of greenhouse gases into the atmosphere. The energy sector, which burns fossil fuels to help generate power for electricity, heating, industry, and transport, contributes about two thirds of global greenhouse gas emissions, motivating a push to find renewable and sustainable energy sources to replace fossil fuels (Energy, 2020). One such source is nuclear energy, which is generated when the nucleus of an atom breaks apart, a process known as fission (Is Nuclear Energy Renewable?, 2020). Nuclear energy can also be generated through a fusion reaction, but current fusion technologies are unable to scale up the reactions for commercial use (Provide). Nuclear reactors often use uranium-235 as a fuel source, but there are a few that use plutonium instead (Nuclear explained).
 
 One point that proponents of nuclear energy often raise is that a nuclear power plant will often produce much more energy than a non-nuclear one, including plants that rely on hydro, wind, and solar power (Ulmer-Scholle). However, we want to examine whether or not this is necessarily the case. Power plants can have accidents that cause them to shut down for some time. Power plants can also require fuel; in the case of a nuclear power plant, uranium is required. If fuel is scarce, then the power plant won't be able to operate at full capacity. Like many things, power plants need maintenance, which can involve shutting down the plant for some time. For this case study, we will examine if the energy we expect a nuclear power plant to produce in a given year significantly higher than the energy produced by a non-nuclear power plant. By answering this question, we can evaluate how effective nuclear energy will be at generating the necessary to power the modern world compared to the alternatives.
 
 To answer how much energy we expect nuclear and non-nuclear power plants to produce, we will look at the total Megawatt hours produced in a year as our response variable. For our predictor variables, we will use country, year, the proportion of energy that comes from nuclear power plants, the country's population, the country's GDP, and the type of power used at the reactor. We are primarily interested in the type of power used at the reactor. Because nuclear energy is only used by 30 countries in the world, the country becomes a significant variable. Factors like population, GDP, and the proportion of energy that comes from nuclear power plants control for the wealth of a nation and the amount of its economic investment in nuclear power. For our null hypothesis, we assume that there is no significant difference in the energy production of a nuclear power plant compared to a non-nuclear one.
 
 The data we will use for this analysis comes from the World Development Indicators from the World Bank and the World Resources Institute. The World Bank compiled its data from internationally recognized sources such as the United Nations (UN) and the International Monetary Fund (IMF). The World Resources Institute compiled data collected by the US Energy Information Administration (EIA), a government agency that gathers data about the country's operational power plants, and other national energy agencies to build a database of power plant statistics.
+
+# Methodology
+
+To fit this model, we will fit a regression model.
+
 
 # References
 
