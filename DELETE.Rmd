@@ -1,0 +1,33 @@
+---
+title: "DELETE"
+author: "Austin Kao"
+date: "4/23/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\begin{table}[h!]
+\begin{center}
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Variable} & \textbf{Coefficient} & \textbf{Standard Error} & \textbf{p-Value}\\
+\hline
+\hline
+Intercept    &      0.312 & 0.003 &   \textless{}0.001\\
+Majority Renewable    &    0.005 & 0.001  &  \textless{}0.001\\
+HICC region        &      0.009 & 0.008 &   0.221\\    
+MRO region           &     -0.216 &  0.004 &  \textless{}0.001\\
+NPCC region          &     -0.179 &  0.004 &  \textless{}0.001\\
+RFC region           &     -0.216 &  0.004 &  \textless{}0.001\\
+SERC region          &     -0.205 &  0.004 &  \textless{}0.001\\
+TRE region           &     -0.216 &  0.007 &  \textless{}0.001\\
+WECC region          &     -0.194 &  0.003 &  \textless{}0.001\\
+Summer Peak Demand & \textless{}0.001 &  \textless{}0.001 &  \textless{}0.001\\
+\hline
+\end{tabular}
+\caption{Average Price model}
+\end{center}
+\end{table}
