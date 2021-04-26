@@ -65,7 +65,7 @@ power_summary <- power %>% group_by(`Utility Number`) %>%
 price_summary <- merge(prices, power_summary, by="Utility Number")
 price_summary$surplus <- price_summary$total_gen - price_summary$`Total Sales Megawatthours`
 price_summary <- merge(operations, price_summary, by="Utility Number")
-price_summary$average_price <- 1000*price_summary$`Total Revenue`/price_summary$`Total Sales Megawatthours`
+price_summary$average_price <- price_summary$`Total Revenue`/(price_summary$`Total Sales Megawatthours`)
 ```
 
 ```{r}
@@ -78,13 +78,15 @@ power$`Renewable` <- if_else(power$`Fuel Type`=="renew"|power$`Fuel Type`=="nucl
 
 # Introduction
 
+One of the most pressing issues of today is man-made climate change. Climate change is spurred by the emission of greenhouse gases into the atmosphere. The energy sector, which burns fossil fuels to help generate power for electricity, heating, industry, and transport, contributes about two thirds of global greenhouse gas emissions, motivating a push to find renewable and sustainable energy sources to replace fossil fuels (Energy, 2020). While renewables become more widespread and accessible, many 
+
 Our main goal for this analysis is to assess the economic performance of renewable power plants compared to non-renewable ones. We plan to do so by examining the relationship between the average price of electricity sold by electric utilities in the United States and the proportion of power plants utilities operate that run on renewable energy sources. We also would like to examine the relationship between the electrical output of a power plant and the type of energy that a power plant uses.
 
 ### Dataset
 
 The data we will use for this analysis comes primarily from the US Energy Information Administration (EIA), a government agency that gathers data about the country's operational power plants. The EIA collects generator-specific data on the electricity generation throughout the nation through surveys each power plant completes known as Form 923. It also collects data on the finances of electric utilities throughout the nation through surveys each utility completes known as Form 861.
 
-To model the performance of electrical utilities, for our response variable, we will use the average price of the electricity sold, measured in dollars per watt-hour, by utilities in the year 2019. Our main predictor is the proportion of power plants utilities operate that run on renewable energy sources. This is because we are interested in how utilities will perform economically as they shift towards renewable energy more and more. We will consider the NERC (North American Electricity Reliability Corporation) region the utility is based in since each region sets its own regulatory standards. 
+To model the performance of electrical utilities, for our response variable, we will use the average price of the electricity sold, measured in dollars per kilowatt-hour, by utilities in the year 2019. Our main predictor is the proportion of power plants utilities operate that run on renewable energy sources. This is because we are interested in how utilities will perform economically as they shift towards renewable energy more and more. We will consider the NERC (North American Electricity Reliability Corporation) region the utility is based in since each region sets its own regulatory standards. 
 
 To model the performance of electrical power plants, for our response variable, we will use the net generation of electricity, measured in Megawatthours, by power plants in the year 2019. Our main predictor is the type of fuel the power plant uses, which can renewable, nonrenewable, nuclear, or some other type of fuel as classified by the EIA. This is because we are interested in which energy sources significantly outperform the others. We will, once again, consider the NERC (North American Electricity Reliability Corporation) region the utility is based in since each region sets its own regulatory standards.
 
@@ -98,30 +100,46 @@ ggplot(price_summary, mapping = aes(x=average_price)) +
 ```{r}
 ggplot(price_summary, mapping = aes(y=average_price,x=prop_fuel_renew)) +
   geom_point() + 
-  labs(x = "Proportion of renewable power plants", y = "Average price ($/Wh)")
+  labs(x = "Proportion of renewable power plants", y = "Average price ($/kWh)")
 ```
+```{r}
+ggplot(power, mapping = aes(x=Generation)) +
+  geom_histogram() + 
+  labs(x = "Generation (Megawatthours)")
+```
+
 
 # Methodology
 
 
-To fit this model, we will fit a ordinary least squares regression model. We chose this model because when examining our EDA, the response variable may have a linear relationship with the predictor variables.
+To fit these models, we will fit ordinary least squares regression models. We chose this type of model because when examining our EDA, the response variable may have a linear relationship with our predictor variables. Other models that were considered include a Bayesian model, where we would incorporate some prior belief into our model.
 
-We will use the following model:  
-$y = \beta_0+\beta_1 NERC region+\beta_1 PeakSummerDemand+\beta_2 $  
-In the above model, y is the response and x is the predictor variable.
+To find the impact of renewables on the average price of electricity, we will use the following model:  
+$y_i = \beta_0+\beta_1 NERC region_i+\beta_2PeakSummerDemand_i $  
+In the above model, y is the average price of electricity for the $i^{th}$ utility.
 
-A linear regression model assumes that a linear relationship exists between the response variable and a linear combination of the predictor variables. Another assumption is that the variance of the model residuals is constant for all sets of predictor variables. We will plot the residuals of the model against fitted values to verify that these assumptions are satisfied. Another assumption is that the model residuals form a normal distribution around the mean of the response, which we will verify using a Normal QQ-plot. The last assumption is that there is independence between observations. Unfortunately, because the same company could have built many of the same kind of power plant, we cannot be sure that power plants will be independent of each other. However, for sensitivity analysis, we will try other models to ensure that our findings are robust.
+To find the impact of renewables on the net electrical output, we will use the following model:  
+$y_i = \beta_0+\beta_1 NERC region_i $  
+In the above model, y is the electricity generated for the $i^{th}$ power plant.
+
+A ordinary least-squares regression model assumes that a linear relationship exists between the response variable and a linear combination of the predictor variables as well as that the variance of the model residuals is constant for all sets of values for the predictor variables. To verify that these assumptions are reasonable, we plot the residuals of the model against the fitted values. Another assumption we make is that the model residuals form a normal distribution around the mean of the response, which we will verify using a Normal QQ-plot. The last assumption is that there is independence between observations.
+
+We plan to try other models to ensure that our findings are robust.
+
+Unfortunately, because the same company could have built many of the same kind of power plant, we cannot be sure that power plants will be independent of each other. However, for sensitivity analysis, we will try other models to ensure that our findings are robust.
 
 
 ```{r}
-length(unique(power2$`Plant Code`))
-length(unique(power2$`Plant Name`))
-length(unique(power3$`Plant Id`))
-length(unique(power3$`Plant Name`))
-length(unique(comp$`Facility Name`))
-length(unique(emission$`Plant Code`))
-length(unique(so2$`Plant Code`))
-length(unique(nox$`Plant Code`))
+#length(unique(power2$`Plant Code`))
+#length(unique(power2$`Plant Name`))
+length(unique(power$`Plant Id`))
+length(unique(prices$`Utility Number`))
+length(unique(power$`Utility Number`))
+#length(unique(power3$`Plant Name`))
+#length(unique(comp$`Facility Name`))
+#length(unique(emission$`Plant Code`))
+#length(unique(so2$`Plant Code`))
+#length(unique(nox$`Plant Code`))
 ```
 ```{r}
 sum(emission$`Metric Tonnes of CO2 Emissions`, na.rm = TRUE)
@@ -147,6 +165,7 @@ summary(m2)
 
 # Discussion
 
+After generating the results above, it is clear that 
 
 # References
 
