@@ -78,7 +78,7 @@ power$`Renewable` <- if_else(power$`Fuel Type`=="renew"|power$`Fuel Type`=="nucl
 
 # Introduction
 
-One of the most pressing issues of today is man-made climate change. Climate change is spurred by the emission of greenhouse gases into the atmosphere. The energy sector, which burns fossil fuels to help generate power for electricity, heating, industry, and transport, contributes about two thirds of global greenhouse gas emissions, motivating a push to find renewable and sustainable energy sources to replace fossil fuels (Energy, 2020). While renewables become more widespread and accessible, many 
+One of the most pressing issues of today is man-made climate change. Climate change is spurred by the emission of greenhouse gases into the atmosphere. The energy sector, which burns fossil fuels to help generate power for electricity, heating, industry, and transport, contributes about two thirds of global greenhouse gas emissions, motivating a push to find renewable and sustainable energy sources to replace fossil fuels (Energy, 2020). While renewables become more widespread and accessible, many have criticized its economic cost and value compared to non-renewables.
 
 Our main goal for this analysis is to assess the economic performance of renewable power plants compared to non-renewable ones. We plan to do so by examining the relationship between the average price of electricity sold by electric utilities in the United States and the proportion of power plants utilities operate that run on renewable energy sources. We also would like to examine the relationship between the electrical output of a power plant and the type of energy that a power plant uses.
 
