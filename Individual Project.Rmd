@@ -15,14 +15,20 @@ library(tidyverse)
 ```
 
 ```{r}
+plant <- read_excel("2___Plant_Y2019.xlsx", skip=1)
+plant <- rename(plant, "Utility Number" = `Utility ID`)
+plant <- rename(plant, "Plant Id" = `Plant Code`)
 prices <- read_excel("Sales_Ult_Cust_2019.xlsx", skip=2)
 prices <- rename(prices, "Total Revenue" = `Total Revenue Thousand Dollars`)
+fuel <- read_excel("EIA923_Schedules_2_3_4_5_M_12_2019_Final_Revision.xlsx", skip = 4, sheet = "Page 5 Fuel Receipts and Costs")
 power <- read_excel("EIA923_Schedules_2_3_4_5_M_12_2019_Final_Revision.xlsx", skip = 5)
 operations <- read_excel("Operational_Data_2019.xlsx", skip=2)
+numbers861 <- read_excel("Frame_2019.xlsx")
+dist861 <- read_excel("Distribution_Systems_2019.xlsx")
+util<- read_excel("Utility_Data_2019.xlsx", skip=1)
 #power2 <- power2 %>% filter(`Sector` != 2)
 power <- rename(power, "Generation" = `Net Generation (Megawatthours)`)
 power <- rename(power, "Fuel Type" = `Reported Fuel Type Code`)
-power <- rename(power, "Utility Number" = `Operator Id`)
 nonrenew <- list("ANT", "BIT", "LIG", "SGC", "SUB", "WC", "RC", "DFO", "JF", "KER", "PC", "PG", "RFO", "SGP", "WO", "BFG", "NG", "OG", "SC")
 renew <- list("AB", "MSW", "OBS", "WDS", "OBL", "SLW", "BLQ", "WDL", "LFG", "OBG", "SUN", "WND", "GEO", "WAT", "MSB")
 other <- list("WAT", "PUR", "WH", "TDF", "MWH", "OTH", "MSN")
@@ -39,16 +45,24 @@ power$`Fuel Type` <- if_else(sapply(power$`Fuel Type`, FUN = isNonRenew), "nonre
 power$`Fuel Type` <- if_else(sapply(power$`Fuel Type`, FUN = isRenew), "renew", power$`Fuel Type`)
 power$`Fuel Type` <- if_else(sapply(power$`Fuel Type`, FUN = isOther), "other", power$`Fuel Type`)
 power$`Fuel Type` <- if_else(power$`Fuel Type`=="NUC", "nuclear", power$`Fuel Type`)
+plant_select <- select(plant, `Plant Id`, `Utility Number`)
+power <- merge(power, plant_select, by = "Plant Id")
+fuel <- merge(fuel, plant_select, by = "Plant Id")
 ```
 
 ```{r}
-enviro <- read_excel("EIA923_Schedule_8_Annual_Environmental_Information_2019_Final_Revision.xlsx", skip = 4, sheet = "8B Financial Information")
-enviro_summary <- enviro %>% group_by(`Plant ID`) %>% 
-  summarise(total = `Total Other O and M Expense`)
-enviro_summary <- rename(enviro_summary, "Plant Id" = `Plant ID`)
-power <- merge(power, enviro_summary, by = "Plant Id")
+operations_select <- select(operations, `Utility Number`, `Retail Sales`, `Sales for Resale`, `Total Sources`,
+                            `Summer Peak Demand`, `Winter Peak Demand`)
+operations_select$efficiency <- (operations$`Retail Sales`+operations$`Sales for Resale`)/operations$`Total Sources`
+dist861_select <- select(dist861, `Utility Number`, `Distribution Circuits`, `Circuits with Voltage Optimization`)
+dist861_select <- dist861_select %>% group_by(`Utility Number`) %>%
+  summarise(`Distribution Circuits` = sum(`Distribution Circuits`),
+            `Circuits with Voltage Optimization` = sum(`Circuits with Voltage Optimization`))
+util_select <- select(util, `Utility Number`, `NERC Region`)
+fuel_select <- select(fuel, `Utility Number`, FUEL_COST)
+fuel_summary <- fuel_select %>% group_by(`Utility Number`) %>%
+  summarise(fuel_cost = sum(as.numeric(FUEL_COST), na.rm = TRUE))
 ```
-
 
 ```{r}
 power_summary <- power %>% group_by(`Utility Number`) %>% 
@@ -60,27 +74,46 @@ power_summary <- power %>% group_by(`Utility Number`) %>%
             prop_gen_renew = if_else(total_gen != 0, sum(if_else(`Fuel Type`=="renew", Generation, 0))/total_gen, 0),
             prop_gen_nuclear = if_else(total_gen != 0, sum(if_else(`Fuel Type`=="nuclear", Generation, 0))/total_gen, 0),
             prop_gen_nonrenew = if_else(total_gen != 0, sum(if_else(`Fuel Type`=="nonrenew", Generation, 0))/total_gen, 0),
-            prop_gen_other = if_else(total_gen != 0, sum(if_else(`Fuel Type`=="other", Generation, 0))/total_gen, 0),
-            nerc = `NERC Region`)
+            prop_gen_other = if_else(total_gen != 0, sum(if_else(`Fuel Type`=="other", Generation, 0))/total_gen, 0)
+            ) %>% distinct()
+#power_summary <- merge(power_summary, fuel_summary, by="Plant Id")
+power_summary$fuel_prop <- if_else(power_summary$prop_fuel_renew == 0, "None", if_else(power_summary$prop_fuel_renew == 1, "All", "Some"))
 price_summary <- merge(prices, power_summary, by="Utility Number")
 price_summary$surplus <- price_summary$total_gen - price_summary$`Total Sales Megawatthours`
-price_summary <- merge(operations, price_summary, by="Utility Number")
+price_summary <- merge(price_summary, operations_select, by="Utility Number", all.x = TRUE)
+#price_summary <- merge(dist861_select, price_summary, by="Utility Number", all.x = TRUE)
+price_summary <- merge(price_summary, util_select, by="Utility Number", all.x = TRUE)
 price_summary$average_price <- price_summary$`Total Revenue`/(price_summary$`Total Sales Megawatthours`)
+#price_summary$majority_renew <- if_else(price_summary$prop_gen_renew + price_summary$prop_gen_nuclear > 0.5, 1, 0)
+#price_summary$size <- price_summary$`Total Customers Count`/price_summary$`Distribution Circuits
+price_summary$`NERC Region` <- if_else(price_summary$`NERC Region`=="MISO" | price_summary$`NERC Region`=="MPS", "MRO", price_summary$`NERC Region`)
+price_summary$`NERC Region` <- if_else(price_summary$`NERC Region`=="AK", "ASCC", price_summary$`NERC Region`)
+price_summary$`NERC Region` <- if_else(price_summary$`NERC Region`=="HI" | price_summary$`NERC Region`=="HICC", "WECC", price_summary$`NERC Region`)
+price_summary$`NERC Region` <- if_else(price_summary$`NERC Region`=="5-MISE", "RFC", price_summary$`NERC Region`)
+price_summary$`NERC Region` <- factor(price_summary$`NERC Region`, c("SERC", "WECC", "RFC", "NPCC", "MRO", "SPP", "TRE", "FRCC", "ASCC"))
+price_summary$peak_demand <- if_else(price_summary$`Summer Peak Demand` > price_summary$`Winter Peak Demand`, price_summary$`Summer Peak Demand`/1000000, price_summary$`Winter Peak Demand`/1000000)
+price_summary$commerce <- as.numeric(price_summary$`Commericial Customers Count`) / price_summary$`Total Customers Count`
+price_summary <- merge(price_summary, fuel_summary, by="Utility Number", all.x = TRUE)
 ```
 
 ```{r}
-price_summary$majority_renew <- if_else(price_summary$prop_gen_renew + price_summary$prop_gen_nuclear > 0.5, 1, 0)
+sum(numbers861$`Distribution Systems`=="X", na.rm = TRUE)
+sum(numbers861$`Sales to Ultimate Customers`=="X", na.rm = TRUE)
+sum(numbers861$`Operational Data`=="X", na.rm = TRUE)
+sum(numbers861$`Dynamic Pricing`=="X", na.rm = TRUE)
+length(unique(power$`Utility Number`))
+length(unique(power_summary$`Utility Number`))
+length(unique(prices$`Utility Number`))
+length(unique(price_summary$`Utility Number`))
+length(unique(util_select$`Utility Number`))
+sum(operations$`Net Generation`!=0)
 ```
-```{r}
-power$`Renewable` <- if_else(power$`Fuel Type`=="renew"|power$`Fuel Type`=="nuclear", 1, 0)
-```
-
 
 # Introduction
 
 One of the most pressing issues of today is man-made climate change. Climate change is spurred by the emission of greenhouse gases into the atmosphere. The energy sector, which burns fossil fuels to help generate power for electricity, heating, industry, and transport, contributes about two thirds of global greenhouse gas emissions, motivating a push to find renewable and sustainable energy sources to replace fossil fuels (Energy, 2020). While renewables become more widespread and accessible, many have criticized its economic cost and value compared to non-renewables.
 
-Our main goal for this analysis is to assess the economic performance of renewable power plants compared to non-renewable ones. We plan to do so by examining the relationship between the average price of electricity sold by electric utilities in the United States and the proportion of power plants utilities operate that run on renewable energy sources. We also would like to examine the relationship between the electrical output of a power plant and the type of energy that a power plant uses.
+Our main goal for this analysis is to assess the economic performance of renewable power plants compared to non-renewable ones. We plan to do so by examining the relationship between the average price of electricity sold by electric utilities in the United States and the proportion of power plants utilities operate that run on renewable energy sources.
 
 ### Dataset
 
@@ -88,9 +121,14 @@ The data we will use for this analysis comes primarily from the US Energy Inform
 
 To model the performance of electrical utilities, for our response variable, we will use the average price of the electricity sold, measured in dollars per kilowatt-hour, by utilities in the year 2019. Our main predictor is the proportion of power plants utilities operate that run on renewable energy sources. This is because we are interested in how utilities will perform economically as they shift towards renewable energy more and more. We will consider the NERC (North American Electricity Reliability Corporation) region the utility is based in since each region sets its own regulatory standards. 
 
-To model the performance of electrical power plants, for our response variable, we will use the net generation of electricity, measured in Megawatthours, by power plants in the year 2019. Our main predictor is the type of fuel the power plant uses, which can renewable, nonrenewable, nuclear, or some other type of fuel as classified by the EIA. This is because we are interested in which energy sources significantly outperform the others. We will, once again, consider the NERC (North American Electricity Reliability Corporation) region the utility is based in since each region sets its own regulatory standards.
-
 ### EDA
+```{r}
+ggplot(price_summary, mapping = aes(x=fuel_prop)) +
+  geom_bar() + 
+  labs(x = "Average Price")
+```
+
+
 ```{r}
 ggplot(price_summary, mapping = aes(x=average_price)) +
   geom_histogram() + 
@@ -100,10 +138,17 @@ ggplot(price_summary, mapping = aes(x=average_price)) +
 ```{r}
 ggplot(price_summary, mapping = aes(y=average_price,x=prop_fuel_renew)) +
   geom_point() + 
-  labs(x = "Proportion of renewable power plants", y = "Average price ($/kWh)")
+  labs(x = "Proportion of renewable power plants", y = "Average price ($/kWh)") +
+  geom_smooth(method = "lm")
 ```
 ```{r}
-ggplot(power, mapping = aes(x=Generation)) +
+ggplot(price_summary, mapping = aes(y=average_price,x=log(`Total Customers Count`))) +
+  geom_point() + 
+  labs(x = "Predictor", y = "Average price ($/kWh)") + geom_smooth(method = "lm")
+```
+
+```{r}
+ggplot(power, mapping = aes(x=log(Generation))) +
   geom_histogram() + 
   labs(x = "Generation (Megawatthours)")
 ```
@@ -115,7 +160,7 @@ ggplot(power, mapping = aes(x=Generation)) +
 To fit these models, we will fit ordinary least squares regression models. We chose this type of model because when examining our EDA, the response variable may have a linear relationship with our predictor variables. Other models that were considered include a Bayesian model, where we would incorporate some prior belief into our model.
 
 To find the impact of renewables on the average price of electricity, we will use the following model:  
-$y_i = \beta_0+\beta_1 NERC region_i+\beta_2PeakSummerDemand_i $  
+$y_i = \beta_0+\beta_1 NERC region_i+\beta_2PeakSummerDemand_i + \beta_3 + \beta_4 $  
 In the above model, y is the average price of electricity for the $i^{th}$ utility.
 
 To find the impact of renewables on the net electrical output, we will use the following model:  
@@ -135,14 +180,12 @@ Unfortunately, because the same company could have built many of the same kind o
 length(unique(power$`Plant Id`))
 length(unique(prices$`Utility Number`))
 length(unique(power$`Utility Number`))
+sum(operations$`Net Generation`!=0)
 #length(unique(power3$`Plant Name`))
 #length(unique(comp$`Facility Name`))
 #length(unique(emission$`Plant Code`))
 #length(unique(so2$`Plant Code`))
 #length(unique(nox$`Plant Code`))
-```
-```{r}
-sum(emission$`Metric Tonnes of CO2 Emissions`, na.rm = TRUE)
 ```
 
 
@@ -154,18 +197,65 @@ sum(emission$`Metric Tonnes of CO2 Emissions`, na.rm = TRUE)
 # Results
 
 ```{r}
-m1 <- lm(average_price ~ prop_fuel_renew + nerc + `Summer Peak Demand`, data = price_summary)
+price_summary$fuel_cat <- if_else(is.na(price_summary$fuel_cost), "Not available", if_else(price_summary$fuel_cost > 50000, "High", "Low"))
+```
+
+
+```{r}
+m1 <- lm(average_price~ prop_fuel_renew + `NERC Region` + peak_demand + commerce + fuel_cat, data = price_summary)
 summary(m1)
 ```
 ```{r}
 m2 <- lm(`Generation` ~ `Fuel Type` + `NERC Region`, data = power)
 summary(m2)
 ```
-
+\begin{table}[h!]
+\begin{center}
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Variable} & \textbf{Coefficient} & \textbf{Standard Error} & \textbf{p-Value}\\
+\hline
+\hline
+Intercept    &      0.312 & 0.003 &   \textless{}0.001\\
+Majority Renewable    &    0.005 & 0.001  &  \textless{}0.001\\
+HICC region        &      0.009 & 0.008 &   0.221\\    
+MRO region           &     -0.216 &  0.004 &  \textless{}0.001\\
+NPCC region          &     -0.179 &  0.004 &  \textless{}0.001\\
+RFC region           &     -0.216 &  0.004 &  \textless{}0.001\\
+SERC region          &     -0.205 &  0.004 &  \textless{}0.001\\
+TRE region           &     -0.216 &  0.007 &  \textless{}0.001\\
+WECC region          &     -0.194 &  0.003 &  \textless{}0.001\\
+Summer Peak Demand & \textless{}0.001 &  \textless{}0.001 &  \textless{}0.001\\
+\hline
+\end{tabular}
+\caption{Average Price model}
+\end{center}
+\end{table}
 
 # Discussion
 
-After generating the results above, it is clear that 
+From our results, we reach the conclusion that, at a significance level of 0.05, the average price of electricity sold by a utility is significantly associated with the proportion of renewable energy power plants run by that utility. We find that for every one percentage point increase in the proportion of renewable energy power plants, the average price of electricity decreases by (INSERT NUMBER). These results are encouraging to policy makers who are looking to encourage the construction of and switch to renewable energy sources. This means that electrical utilities who want to construct more renewable energy power plants and retire nonrenewable ones will become more price-competitive, which will make them more appealing to consumers.
+
+Some of the limitations of this analysis stem from the way the data was collected. Because financial data is reported to the EIA at the utility level, it is unclear how much revenue each individual power plant generates. In the future, we could try to collect more detailed financial data that would allow us to determine these quantities, which would let us determine the average price of electricity sold by each power plant. Another limitation is the fact that many utilities that generate electricity do not end up selling the electricity to end users of that power, but to electric utility wholesalers, who act as middlemen that transport and resell the electricity to other electric utilities. Any future analysis would try to estimate the price of the electricity sold to wholesalers and incorporate that information.
+
+We also recognize that the results of this analysis can only be generalized to electric utilities in the U.S. Considering how climate change is a global issue, we would like to determine if we would observe the same results when applied to the global energy market. Another interesting point of analysis is to look at other economic indicators, such as the amount of profit or the rate of return for an electric utility. This would help us see if renewables can still outperform nonrenewables in other measures of economic performance.
+
+Another avenue for future work is to fit a Bayesian model to see if it is more suitable for this data. Because the distribution of average prices skews to the right, incorporating a prior for the variance of the distribution could make our model more accurate.
+
+
+
+# Appendix
+
+```{r}
+plot(fitted.values(m1), residuals(m1), xlab = "Fitted Values", ylab = "Residuals", 
+main = "Residuals vs. Fitted Values")
+abline(h=0, col="red")
+```
+
+```{r}
+qqnorm(residuals(m1), main = "Normal Q-Q Plot of Residuals")
+qqline(residuals(m1), col = "blue", lwd = 2)
+```
 
 # References
 
@@ -178,17 +268,3 @@ After generating the results above, it is clear that
 “Provide Energy from Fusion”. National Academy of Engineering, http://www.engineeringchallenges.org/9079.aspx
 
 Ulmer-Scholle, Dana S. "The Basics of Nuclear Energy - Why Nuclear Power?". https://geoinfo.nmt.edu/resources/uranium/why.html
-
-
-# Extra Text
-
-NOTE: DO NOT READ. Is not part of the case study, is text that may or not be used in future iterations of this case study
-
-
-One of the most pressing issues of today is man-made climate change. Climate change is spurred by the emission of greenhouse gases into the atmosphere. The energy sector, which burns fossil fuels to help generate power for electricity, heating, industry, and transport, contributes about two thirds of global greenhouse gas emissions, motivating a push to find renewable and sustainable energy sources to replace fossil fuels (Energy, 2020). One such source is nuclear energy, which is generated when the nucleus of an atom breaks apart, a process known as fission (Is Nuclear Energy Renewable?, 2020). Nuclear energy can also be generated through a fusion reaction, but current fusion technologies are unable to scale up the reactions for commercial use (Provide). Nuclear reactors often use uranium-235 as a fuel source, but there are a few that use plutonium instead (Nuclear explained).
-
-Our main goal for this analysis is to assess the environmental impact of US power plants. We are primarily interested in examining if any significant relationships exist between the plants' type of fuel used and the plants' environmental impact.
-
-One point that proponents of nuclear energy often raise is that a nuclear power plant will often produce much more energy than a non-nuclear one, including plants that rely on hydro, wind, and solar power (Ulmer-Scholle). However, we want to examine whether or not this is necessarily the case. Power plants can have accidents that cause them to shut down for some time. Power plants can also require fuel; in the case of a nuclear power plant, uranium is required. If fuel is scarce, then the power plant won't be able to operate at full capacity. Like many things, power plants need maintenance, which can involve shutting down the plant for some time. For this case study, we will examine if the energy we expect a nuclear power plant to produce in a given year significantly higher than the energy produced by a non-nuclear power plant. By answering this question, we can evaluate how effective nuclear energy will be at generating the necessary to power the modern world compared to the alternatives.
-
-To answer how much energy we expect nuclear and non-nuclear power plants to produce, we will look at the total Megawatt hours produced in a year as our response variable. For our predictor variables, we will use country, year, the proportion of energy that comes from nuclear power plants, the country's population, the country's GDP, and the type of power used at the reactor. We are primarily interested in the type of power used at the reactor. Because nuclear energy is only used by 30 countries in the world, the country becomes a significant variable. Factors like population, GDP, and the proportion of energy that comes from nuclear power plants control for the wealth of a nation and the amount of its economic investment in nuclear power. For our null hypothesis, we assume that there is no significant difference in the energy production of a nuclear power plant compared to a non-nuclear one.
