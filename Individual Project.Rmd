@@ -135,9 +135,9 @@ When examining the plots above, we notice that the distribution of average price
 Based on our EDA, we will fit an ordinary least squares regression model for average price. We chose this type of model because when examining our EDA, average price had a slightly negative relationship with the proportion of renewable energy power plants. However, in our EDA, we also noticed a right skew in our data. To deal with this, we considered applying a log or square-root transformation to our response variable. However, because the main goal of this analysis is inference, having a model that is easy to understand is more imperative. We applied log and square-root transformations as a part of a sensitivity analysis, but we found similar results (See Appendix B,C). Only for a log transformation did we find that one of our other variables becomes significant. In the end, we decided to continue using the untransformed average price, which we find to be sufficient for our purposes.
 
 We will use the following model:  
-$y_i = \beta_0+\beta_1 NERC region_i+\beta_2PeakSummerDemand_i + \beta_3ProportionIndustrialCustomer_i+ \beta_4SmallScaleUtility_i$
+$y_i = \beta_0+\beta_1 NERC Region_i+\beta_2PeakSummerDemand_i + \beta_3ProportionIndustrialCustomer_i+ \beta_4IsASmallScaleUtility_i$
 
-In the above model, y is the electricity generated for the $i^{th}$ power plant.
+In the above model, y is the electricity generated for the $i^{th}$ power plant. It is important to note that because there are nine NERC regions in the data, $NERCRegion_i$ is a vector of eight indicators for whether or not the utility is based in the corresponding region, $\beta_1$ is a vector of the eight coefficients corresponding to each of the eight variables in $NERCRegion_i$.
 
 A ordinary least-squares regression model assumes that a linear relationship exists between the response variable and a linear combination of the predictor variables as well as that the variance of the model residuals is constant for all sets of values for the predictor variables. To verify that these assumptions are reasonable, we plot the residuals of the model against the fitted values (See Appendix A). Another assumption we make is that the model residuals form a normal distribution around the mean of the response, which we will verify using a histogram of the model residuals (See Appendix A). While we noticed some potential issues, overall, these assumptions appear to be satisfied. The last assumption is that there is independence between observations, which is satisfied because utilities that own power plants and sell to end users are not likely to sell the electricity they produce between each other.
 
@@ -275,10 +275,9 @@ We also notice that points in the plot of residuals vs. fitted values are cluste
 
 ```{r}
 m4 <- lm(sqrt(average_price)~ prop_fuel_renew + `NERC Region` + peak_demand + commerce + `Short Form`, data = price_summary)
-summary(m4)
-confint(m4)
+#summary(m4)
+#confint(m4)
 ```
-
 
 \begin{table}[h!]
 \begin{center}
@@ -287,19 +286,19 @@ confint(m4)
 \textbf{Variable} & \textbf{Coefficient} & \textbf{Standard Error} & \textbf{95\% CI} & \textbf{p-Value}\\
 \hline
 \hline
-Intercept & -2.247 & 0.062 & (-2.370, -2.123) & \textless{}0.001\\
-Proportion of Renewable Power Plants & -0.168 & 0.061 & (-0.290, -0.046) & 0.007\\
-WECC Region & -0.030 & 0.074 & (-0.177, 0.116) & 0.685\\
-RFC Region & -0.098 & 0.075 & (-0.246, 0.049) & 0.190 \\   
-NPCC Region & 0.291 & 0.094 & (0.106, 0.476) & \textless{}0.001\\
-MRO Region & -0.074 & 0.070 & (-0.213, 0.064) & 0.292    \\
-SPP Region & -0.057 & 0.078 & (-0.212, 0.097) & 0.466    \\
-TRE Region & -0.041 & 0.177 & (-0.389, 0.308) & 0.820    \\
-FRCC Region & 0.105 & 0.158 & (-0.205, 0.416) & 0.506    \\
-ASCC Region & 0.813 & 0.115 & (0.587, 1.039) & \textless{}0.001\\
-Peak Demand & -10.421 & 4.854 & (-19.955, -0.887) & 0.032    \\
-Proportion of Industrial Customers & -1.339 & 0.143 & (-1.620, -1.058) & \textless{}0.001\\
-Is a Small-Scale Utility & 0.221 & 0.046 & (0.130, 0.311) & \textless{}0.001\\
+Intercept & 0.325 & 0.008 & (0.308, 0.341) & \textless{}0.001\\
+Proportion of Renewable Power Plants & -0.031 & 0.008 & (-0.047, -0.014) & \textless{} 0.001\\
+WECC Region & 0.010 & 0.010 & (-0.010, 0.029) & 0.316\\
+RFC Region & -0.006 & 0.010 & (-0.026, 0.013) & 0.527\\   
+NPCC Region & 0.059 & 0.013 & (0.034, 0.083) & \textless{} 0.001\\
+MRO Region & -0.010 & 0.009 & (-0.028, 0.008) & 0.283    \\
+SPP Region & -0.008 & 0.010 & (-0.029, 0.012) & 0.430    \\
+TRE Region & -0.006 & 0.024 & (-0.052, 0.040) & 0.794    \\
+FRCC Region & 0.015 & 0.021 & (-0.026, 0.056) & 0.473     \\
+ASCC Region & 0.181 & 0.015 & (0.151, 0.211) & \textless{} 0.001\\
+Peak Demand & -1.069 & 0.644 & (-2.333, 0.195) & 0.097    \\
+Proportion of Industrial Customers & -0.146 & 0.019 & (-0.183, -0.108) & \textless{} 0.001\\
+Is a Small-Scale Utility & 0.035 & 0.006 & (0.023, 0.047) & \textless{} 0.001\\
 \hline
 \end{tabular}
 \caption{Square-Root Transformation of Average Price}
