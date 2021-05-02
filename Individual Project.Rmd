@@ -61,7 +61,7 @@ dist861_select <- dist861_select %>% group_by(`Utility Number`) %>%
 util_select <- select(util, `Utility Number`, `NERC Region`)
 fuel_select <- select(fuel, `Utility Number`, FUEL_COST)
 fuel_summary <- fuel_select %>% group_by(`Utility Number`) %>%
-  summarise(fuel_cost = sum(as.numeric(FUEL_COST), na.rm = TRUE))
+  summarise(fuel_cost = sum(as.numeric(FUEL_COST)/n(), na.rm = TRUE))
 ```
 
 ```{r}
@@ -92,42 +92,28 @@ price_summary$`NERC Region` <- if_else(price_summary$`NERC Region`=="HI" | price
 price_summary$`NERC Region` <- if_else(price_summary$`NERC Region`=="5-MISE", "RFC", price_summary$`NERC Region`)
 price_summary$`NERC Region` <- factor(price_summary$`NERC Region`, c("SERC", "WECC", "RFC", "NPCC", "MRO", "SPP", "TRE", "FRCC", "ASCC"))
 price_summary$peak_demand <- if_else(price_summary$`Summer Peak Demand` > price_summary$`Winter Peak Demand`, price_summary$`Summer Peak Demand`/1000000, price_summary$`Winter Peak Demand`/1000000)
-price_summary$commerce <- as.numeric(price_summary$`Commericial Customers Count`) / price_summary$`Total Customers Count`
-price_summary <- merge(price_summary, fuel_summary, by="Utility Number", all.x = TRUE)
-```
-
-```{r}
-sum(numbers861$`Distribution Systems`=="X", na.rm = TRUE)
-sum(numbers861$`Sales to Ultimate Customers`=="X", na.rm = TRUE)
-sum(numbers861$`Operational Data`=="X", na.rm = TRUE)
-sum(numbers861$`Dynamic Pricing`=="X", na.rm = TRUE)
-length(unique(power$`Utility Number`))
-length(unique(power_summary$`Utility Number`))
-length(unique(prices$`Utility Number`))
-length(unique(price_summary$`Utility Number`))
-length(unique(util_select$`Utility Number`))
-sum(operations$`Net Generation`!=0)
+price_summary$commerce <- as.numeric(price_summary$`Industrial Customers Count`) / price_summary$`Total Customers Count`
+price_summary$`Short Form`<- if_else(is.na(price_summary$`Short Form`), "N", price_summary$`Short Form`)
+#price_summary <- merge(price_summary, fuel_summary, by="Utility Number", all.x = TRUE)
 ```
 
 # Introduction
 
-One of the most pressing issues of today is man-made climate change. Climate change is spurred by the emission of greenhouse gases into the atmosphere. The energy sector, which burns fossil fuels to help generate power for electricity, heating, industry, and transport, contributes about two thirds of global greenhouse gas emissions, motivating a push to find renewable and sustainable energy sources to replace fossil fuels (Energy, 2020). While renewables become more widespread and accessible, many have criticized its economic cost and value compared to non-renewables.
+One of the most pressing issues of today is man-made climate change. Climate change is spurred by the emission of greenhouse gases into the atmosphere. The energy sector, which burns fossil fuels to help generate power for electricity, heating, industry, and transport, contributes about two thirds of global greenhouse gas emissions, motivating a push to find renewable and sustainable energy sources to replace fossil fuels (Energy, 2020). In fact, according to the International Renewable Energy Agency (IRENA), operating new solar photovoltaic and onshore wind power plants cost less than operating existing coal-fired plants (Renewables, 2020).
 
-Our main goal for this analysis is to assess the economic performance of renewable power plants compared to non-renewable ones. We plan to do so by examining the relationship between the average price of electricity sold by electric utilities in the United States and the proportion of power plants utilities operate that run on renewable energy sources.
+We would like to further explore the IRENA's claim and its implications by assessing the economic performance of electrical utilities in the U.S. Namely, we want to determine if any significant relationship exists between the proportion of renewable energy power plants an electric utility owns and the average price of electricity sold by that utility. By doing so, we hope to gain insight into the state of the U.S. energy market and whether or not renewable energy technologies, in general, will be economically viable.
 
 ### Dataset
 
-The data we will use for this analysis comes primarily from the US Energy Information Administration (EIA), a government agency that gathers data about the country's operational power plants. The EIA collects generator-specific data on the electricity generation throughout the nation through surveys each power plant completes known as Form 923. It also collects data on the finances of electric utilities throughout the nation through surveys each utility completes known as Form 861.
+The data we will use for this analysis comes primarily from the US Energy Information Administration (EIA), a government agency that gathers data about the country's operational power plants. The EIA collects generator-specific data on the electricity generated throughout the nation through surveys each power plant completes known as Form 923. It also collects data on the finances of electric utilities throughout the nation through surveys each utility completes known as Form 861.
 
-To model the performance of electrical utilities, for our response variable, we will use the average price of the electricity sold, measured in dollars per kilowatt-hour, by utilities in the year 2019. Our main predictor is the proportion of power plants utilities operate that run on renewable energy sources. This is because we are interested in how utilities will perform economically as they shift towards renewable energy more and more. We will consider the NERC (North American Electricity Reliability Corporation) region the utility is based in since each region sets its own regulatory standards. 
+### Variables
+
+To model the performance of electrical utilities, for our response variable, we will use the average price of the electricity sold, measured in dollars per kilowatt-hour, by utilities in the year 2019. Our main predictor is the proportion of renewable energy power plants that utilities own. We define renewable energy power plants to be those that use solar, wind, hydro, nuclear, and geothermal sources, as well as those that use solid, liquid, and gaseous biomasses for fuel.
+
+Other predictors that we will include are the NERC (North American Electricity Reliability Corporation) region the utility is based in, the proportion of customers that are industrial, the peak demand of electricity, measured in terawatt-hours, and whether or not the utility is considered small. Each NERC region in the country sets its own regulatory standards and operating procedures, so the NERC region a utility is based in can affect prices greatly. Industrial customers are known to buy electricity at cheaper prices than commercial and residential customers do (Key, 2017), so if a utility sells exclusively to industry, that utility will be able to sell its electricity at lower prices than utilities that only sell to commercial and residential customers. The peak demand of electricity for a utility represents the most energy all of its customers want. If the peak demand is high, it is likely the utility will be able to charge higher prices for its energy. Finally, small-scale utilities are only required by the EIA to fill out a short form for the Form 861 survey. In general, the EIA defines these entities to be those that have annual retail sales of 200,000 megawatt-hours or less. We suspect that such entities, due to their small size, often have to charge higher rates for electricity since they don't sell as much electricity as larger entities do.
 
 ### EDA
-```{r}
-ggplot(price_summary, mapping = aes(x=fuel_prop)) +
-  geom_bar() + 
-  labs(x = "Average Price")
-```
-
 
 ```{r}
 ggplot(price_summary, mapping = aes(x=average_price)) +
@@ -141,30 +127,21 @@ ggplot(price_summary, mapping = aes(y=average_price,x=prop_fuel_renew)) +
   labs(x = "Proportion of renewable power plants", y = "Average price ($/kWh)") +
   geom_smooth(method = "lm")
 ```
-```{r}
-ggplot(price_summary, mapping = aes(y=average_price,x=log(`Total Customers Count`))) +
-  geom_point() + 
-  labs(x = "Predictor", y = "Average price ($/kWh)") + geom_smooth(method = "lm")
-```
-
-```{r}
-ggplot(power, mapping = aes(x=log(Generation))) +
-  geom_histogram() + 
-  labs(x = "Generation (Megawatthours)")
-```
 
 
 # Methodology
 
 
-To fit these models, we will fit ordinary least squares regression models. We chose this type of model because when examining our EDA, the response variable may have a linear relationship with our predictor variables. Other models that were considered include a Bayesian model, where we would incorporate some prior belief into our model.
+Based on our EDA, we will fit an ordinary least squares regression model for average price. We chose this type of model because when examining our EDA, the response variable may have a linear relationship with our predictor variables. Other models that were considered include a Bayesian model, where we would incorporate some prior belief into our model.
 
 To find the impact of renewables on the average price of electricity, we will use the following model:  
-$y_i = \beta_0+\beta_1 NERC region_i+\beta_2PeakSummerDemand_i + \beta_3 + \beta_4 $  
+$y_i = \beta_0+\beta_1 NERC region_i+\beta_2PeakSummerDemand_i + \beta_3ProportionIndustrialCustomer_i+ \beta_4SmallScaleUtility_i$
+
 In the above model, y is the average price of electricity for the $i^{th}$ utility.
 
 To find the impact of renewables on the net electrical output, we will use the following model:  
-$y_i = \beta_0+\beta_1 NERC region_i $  
+$y_i = \beta_0+\beta_1 NERC region_i$
+
 In the above model, y is the electricity generated for the $i^{th}$ power plant.
 
 A ordinary least-squares regression model assumes that a linear relationship exists between the response variable and a linear combination of the predictor variables as well as that the variance of the model residuals is constant for all sets of values for the predictor variables. To verify that these assumptions are reasonable, we plot the residuals of the model against the fitted values. Another assumption we make is that the model residuals form a normal distribution around the mean of the response, which we will verify using a Normal QQ-plot. The last assumption is that there is independence between observations.
@@ -196,36 +173,36 @@ sum(operations$`Net Generation`!=0)
 ```
 # Results
 
-```{r}
-price_summary$fuel_cat <- if_else(is.na(price_summary$fuel_cost), "Not available", if_else(price_summary$fuel_cost > 50000, "High", "Low"))
-```
-
 
 ```{r}
-m1 <- lm(average_price~ prop_fuel_renew + `NERC Region` + peak_demand + commerce + fuel_cat, data = price_summary)
-summary(m1)
+m1 <- lm(average_price~ prop_fuel_renew + `NERC Region` + peak_demand + commerce + `Short Form`, data = price_summary)
+#summary(m1)
+#confint(m1)
 ```
 ```{r}
 m2 <- lm(`Generation` ~ `Fuel Type` + `NERC Region`, data = power)
-summary(m2)
+#summary(m2)
 ```
 \begin{table}[h!]
 \begin{center}
-\begin{tabular}{|l|r|r|r|}
+\begin{tabular}{|l|r|r|r|r|}
 \hline
-\textbf{Variable} & \textbf{Coefficient} & \textbf{Standard Error} & \textbf{p-Value}\\
+\textbf{Variable} & \textbf{Coefficient} & \textbf{Standard Error} & \textbf{95\% CI} & \textbf{p-Value}\\
 \hline
 \hline
-Intercept    &      0.312 & 0.003 &   \textless{}0.001\\
-Majority Renewable    &    0.005 & 0.001  &  \textless{}0.001\\
-HICC region        &      0.009 & 0.008 &   0.221\\    
-MRO region           &     -0.216 &  0.004 &  \textless{}0.001\\
-NPCC region          &     -0.179 &  0.004 &  \textless{}0.001\\
-RFC region           &     -0.216 &  0.004 &  \textless{}0.001\\
-SERC region          &     -0.205 &  0.004 &  \textless{}0.001\\
-TRE region           &     -0.216 &  0.007 &  \textless{}0.001\\
-WECC region          &     -0.194 &  0.003 &  \textless{}0.001\\
-Summer Peak Demand & \textless{}0.001 &  \textless{}0.001 &  \textless{}0.001\\
+Intercept & 0.106 & 0.006 & (0.093, 0.118) & \textless{}0.001\\
+Proportion of Renewable Power Plants & -0.024 & 0.006 & (0.037, -0.012) & \textless{}0.001\\
+WECC Region & 0.014 & 0.008 & (-0.001, 0.029) & 0.057\\
+RFC Region & -0.001 & 0.008 & (-0.016, 0.014) & 0.899 \\   
+NPCC Region & 0.049 & 0.010 & (0.030, 0.068) & \textless{}0.001\\
+MRO Region & -0.006 & 0.007 & (-0.020, 0.008) & 0.382    \\
+SPP Region & -0.005 & 0.008 & (-0.021, 0.010) & 0.522    \\
+TRE Region & -0.004 & 0.018 & (-0.039, 0.031) & 0.840    \\
+FRCC Region & 0.009 & 0.016 & (-0.022, 0.040) & 0.586    \\
+ASCC Region & 0.168 & 0.012 & (0.146, 0.191) & \textless{}0.001\\
+Peak Demand & -0.365 & 0.489 & (-1.325, 0.595) & 0.455    \\
+Proportion of Industrial Customers & -0.075 & 0.014 & (-0.104, -0.047) & \textless{}0.001\\
+Is a Small-Scale Utility & 0.025 & 0.005 & (0.016, 0.034) & \textless{}0.001\\
 \hline
 \end{tabular}
 \caption{Average Price model}
@@ -259,12 +236,12 @@ qqline(residuals(m1), col = "blue", lwd = 2)
 
 # References
 
-“Nuclear explained”. Energy Information Administration, https://www.eia.gov/energyexplained/nuclear/.
-
-“Is Nuclear Energy Renewable? The Future of Nuclear Energy”. Inspire, 29 April 2020, https://www.inspirecleanenergy.com/blog/clean-energy-101/is-nuclear-energy-renewable#:~:text=Yes%2C%20the%20energy%20that%20is,235%2C%20which%20is%20comparatively%20rare.
-
 “Energy and Climate Change”. European Environment Agency, 23 November 2020, https://www.eea.europa.eu/signals/signals-2017/articles/energy-and-climate-change.
 
-“Provide Energy from Fusion”. National Academy of Engineering, http://www.engineeringchallenges.org/9079.aspx
+"8 Key Factors That Impact Electricity Prices". ElectricChoice.com, 2017, https://www.electricchoice.com/blog/8-key-factors-impact-electricity-prices/
 
-Ulmer-Scholle, Dana S. "The Basics of Nuclear Energy - Why Nuclear Power?". https://geoinfo.nmt.edu/resources/uranium/why.html
+Prehoda, Emily, Joshua M. Pearce, and Chelsea Schelly. "Policies to Overcome Barriers for Renewable Energy
+Distributed Generation: A Case Study of Utility
+Structure and Regulatory Regimes in Michigan". Michigan Technological University, 20 February 2019, https://digitalcommons.mtu.edu/cgi/viewcontent.cgi?article=1181&context=social-sciences-fp
+
+"Renewables Increasingly Beat Even Cheapest Coal Competitors on Cost". International Renewable Energy Agency, 2 June 2020, https://www.irena.org/newsroom/pressreleases/2020/Jun/Renewables-Increasingly-Beat-Even-Cheapest-Coal-Competitors-on-Cost#:~:text=Electricity%20costs%20from%20utility%2Dscale,USD%200.115%2FkWh%2C%20respectively.

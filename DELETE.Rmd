@@ -9,22 +9,27 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
 \begin{table}[h!]
 \begin{center}
-\begin{tabular}{|l|r|r|r|}
+\begin{tabular}{|l|r|r|r|r|}
 \hline
-\textbf{Variable} & \textbf{Coefficient} & \textbf{Standard Error} & \textbf{p-Value}\\
+\textbf{Variable} & \textbf{Coefficient} & \textbf{Standard Error} & \textbf{95\% CI} & \textbf{p-Value}\\
 \hline
 \hline
-Intercept    &      0.312 & 0.003 &   \textless{}0.001\\
-Majority Renewable    &    0.005 & 0.001  &  \textless{}0.001\\
-HICC region        &      0.009 & 0.008 &   0.221\\    
-MRO region           &     -0.216 &  0.004 &  \textless{}0.001\\
-NPCC region          &     -0.179 &  0.004 &  \textless{}0.001\\
-RFC region           &     -0.216 &  0.004 &  \textless{}0.001\\
-SERC region          &     -0.205 &  0.004 &  \textless{}0.001\\
-TRE region           &     -0.216 &  0.007 &  \textless{}0.001\\
-WECC region          &     -0.194 &  0.003 &  \textless{}0.001\\
+Intercept & 0.106 & 0.006 & (0.0933428909, 0.118243521) & \textless{}0.001\\
+Proportion of Renewable Power Plants & -0.0244807 & 0.0062389 & (0.0367338249, -0.012227557) & \textless{}0.001\\
+WECC Region & 0.0143328 & 0.0075252 & (-0.0004466222, 0.029112244) & 0.0573\\
+RFC Region & -0.0009624 & 0.0075495 & (-0.0157893980, 0.013864608) & 0.8986 \\   
+NPCC Region & 0.0488649 & 0.0095037 & (0.0301999327, 0.067529887) & \textless{}0.001\\
+MRO Region & -0.0061978 & 0.0070905 & (-0.0201234477, 0.007727861) & 0.3824    \\
+SPP Region & -0.0050672 & 0.0079146 & (-0.0206113971, 0.010477019) & 0.5223    \\
+TRE Region & -0.0036155 & 0.0178796 & (-0.0387306881, 0.031499717) & 0.8398    \\
+FRCC Region & 0.0086633 & 0.0159155 & (-0.0225944461, 0.039921040) & 0.5864    \\
+ASCC Region & 0.1684498 & 0.0115887 & (0.1456897279, 0.191209817) & \textless{}0.001\\
+Peak Demand & -0.365 & 0.489 & (-1.3248482684, 0.594656438) & 0.4553    \\
+Proportion of Industrial Customers & -0.0754864 & 0.0144048 & (-0.1037772184, -0.047195608) & \textless{}0.001\\
+Is a Small-Scale Utility & 0.0247940 & 0.0046399 & (0.0156813572, 0.033906667) & \textless{}0.001\\
 Summer Peak Demand & \textless{}0.001 &  \textless{}0.001 &  \textless{}0.001\\
 \hline
 \end{tabular}
